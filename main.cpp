@@ -148,7 +148,81 @@ private:
         else
             return node->height;
     }
+    EmployeeNode* searchNode(EmployeeNode* node, int empId){
+        if (node == nullptr || node->employeeID == empId){
+            return node;
+        }
+        if (empId < node->employeeID){
+            return searchNode(node->left, empId);
+        }
+        return searchNode(node->right, empId);
+    }
 
+    EmployeeNode* deleteNode(EmployeeNode* node, int empId){
+        if (node == nullptr){
+            return nullptr;
+        }
+
+        if (empId < node->employeeID){
+            node->left = deleteNode(node->left, empId);
+        }
+        else if (empId > node->employeeID){
+            node->right = deleteNode(node->right, empId);
+        }
+        else{
+            // 0 or 1 child
+            if (node->left == nullptr || node->right == nullptr){
+                EmployeeNode* child = (node->left != nullptr) ? node->left : node->right;
+                delete node;
+                return child;
+            }
+            // 2 children: copy the next-biggest employee here, then delete that one
+            EmployeeNode* successor = node->right;
+            while (successor->left != nullptr){
+                successor = successor->left;
+            }
+            node->employeeID = successor->employeeID;
+            node->name = successor->name;
+            node->department = successor->department;
+            node->title = successor->title;
+            node->email = successor->email;
+            node->right = deleteNode(node->right, successor->employeeID);
+        }
+
+        updateHeight(node);
+
+        int balanceFactor = getBalance(node);
+        //left-left
+        if (balanceFactor > 1 && getBalance(node->left) >= 0){
+            return rotateRight(node);
+        }
+        //left-right
+        if (balanceFactor > 1 && getBalance(node->left) < 0){
+            node->left = rotateLeft(node->left);
+            return rotateRight(node);
+        }
+        //right-right
+        if (balanceFactor < -1 && getBalance(node->right) <= 0){
+            return rotateLeft(node);
+        }
+        //right-left
+        if (balanceFactor < -1 && getBalance(node->right) > 0){
+            node->right = rotateRight(node->right);
+            return rotateLeft(node);
+        }
+        return node;
+    }
+
+    void inOrderTraversal(EmployeeNode* node){
+        if (node == nullptr){
+            return;
+        }
+        inOrderTraversal(node->left);
+        cout << node->employeeID << " | " << node->name << " | "
+             << node->department << " | " << node->title << " | "
+             << node->email << endl;
+        inOrderTraversal(node->right);
+    }
 public:
     AVLTree(){
         root = nullptr;
@@ -171,5 +245,41 @@ public:
     bool insert(int empId, string n, string d, string t, string e){
         root = insert(root, empId, n, d, t, e);
         return completed;
+    }
+    EmployeeNode* search(int empId){
+        return searchNode(root, empId);
+    }
+
+    bool update(int empId, string n, string d, string t, string e){
+        EmployeeNode* node = searchNode(root, empId);
+        if (node == nullptr){
+            return false;
+        }
+        node->setName(n);
+        node->setDepartment(d);
+        node->setTitle(t);
+        node->setEmail(e);
+        return true;
+    }
+
+    bool remove(int empId){
+        if (searchNode(root, empId) == nullptr){
+            return false;
+        }
+        root = deleteNode(root, empId);
+        size -= 1;
+        return true;
+    }
+
+    int getSize() const{
+        return size;
+    }
+
+    void display(){
+        if (root == nullptr){
+            cout << "Directory is empty." << endl;
+            return;
+        }
+        inOrderTraversal(root);
     }
 };
