@@ -79,7 +79,7 @@ private:
         }
         else{ 
             // If the ID already exists, we don't add the node and return the existing node
-            cout << "Error: ID already exists."; //not sure if this goes in main or not
+            cout << "Error: ID already exists.";
             completed = false;
             return node;
         }

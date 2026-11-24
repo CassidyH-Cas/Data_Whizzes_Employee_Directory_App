@@ -1,4 +1,4 @@
-# [Company Employee Directory] 
+# Company Employee Directory 
 
 **Author:** Michael Gibson Jr., Bishesh Poudel, Cassidy Hancock  
 
