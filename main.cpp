@@ -1,5 +1,9 @@
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <limits>
 using namespace std;
 
 class EmployeeNode {
@@ -58,7 +62,7 @@ class AVLTree {
 private: 
     EmployeeNode* root;
     int size;
-    bool completed; //use to check if critical operations were completed
+    bool completed; //this is used to check if critical operations were completed
     EmployeeNode* insert(EmployeeNode* node, int empId, string n, string d, string t, string e){
         if(node == nullptr){
             completed = true;
@@ -75,6 +79,7 @@ private:
             completed = true;
         }
         else{ 
+            // If the ID already exists, we don't add the node and return the existing node
             cout << "Error: ID already exists."; //not sure if this goes in main or not
             completed = false;
             return node;
@@ -223,6 +228,88 @@ private:
              << node->email << endl;
         inOrderTraversal(node->right);
     }
+    // This function writes employee records in ID order.
+    void saveNodes(EmployeeNode* node, ofstream& file){
+        if (node == nullptr){
+            return;
+        }
+        saveNodes(node->left, file);
+        file << node->getID() << "," << csvField(node->getName()) << ","
+             << csvField(node->getDepartment()) << ","
+             << csvField(node->getTitle()) << ","
+             << csvField(node->getEmail()) << "\n";
+        saveNodes(node->right, file);
+    }
+
+    // This function puts quotes around CSV fields that contain commas or quotes.
+    string csvField(string value){
+        string result = "\"";
+        for (char c : value){
+            if (c == '"'){
+                result += "\"\"";
+            }
+            else{
+                result += c;
+            }
+        }
+        result += "\"";
+        return result;
+    }
+
+    // This function reads one CSV row, including fields enclosed in quotes.
+    bool readCSVLine(string line, vector<string>& fields){
+        fields.clear();
+        string value = "";
+        bool inQuotes = false;
+        bool afterQuote = false;
+        for (size_t i = 0; i < line.size(); i++){
+            char c = line[i];
+            if (inQuotes){
+                if (c == '"'){
+                    if (i + 1 < line.size() && line[i + 1] == '"'){
+                        value += '"';
+                        i++;
+                    }
+                    else{
+                        inQuotes = false;
+                        afterQuote = true;
+                    }
+                }
+                else{
+                    value += c;
+                }
+            }
+            else if (afterQuote){
+                if (c == ','){
+                    fields.push_back(value);
+                    value = "";
+                    afterQuote = false;
+                }
+                else{
+                    return false;
+                }
+            }
+            else if (c == '"'){
+                if (!value.empty()){
+                    return false;
+                }
+                inQuotes = true;
+            }
+            else if (c == ','){
+                fields.push_back(value);
+                value = "";
+            }
+            else{
+                value += c;
+            }
+        }
+        if (inQuotes){
+            return false;
+        }
+        fields.push_back(value);
+        return fields.size() == 5;
+    }
+
 public:
     AVLTree(){
         root = nullptr;
@@ -282,4 +369,228 @@ public:
         }
         inOrderTraversal(root);
     }
+
+    bool saveToFile(string filename){
+        ofstream file(filename);
+        if (!file.is_open()){
+            return false;
+        }
+        saveNodes(root, file);
+        file.close();
+        return !file.fail();
+    }
+
+    bool loadFromFile(string filename){
+        ifstream file(filename);
+        if (!file.is_open()){
+            return false;
+        }
+        string line;
+        int skipped = 0;
+        int added = 0;
+        while (getline(file, line)){
+            if (!line.empty() && line.back() == '\r'){
+                line.pop_back();
+            }
+            vector<string> fields;
+            if (!readCSVLine(line, fields)){
+                skipped++;
+                continue;
+            }
+            int id;
+            char extra;
+            stringstream idStream(fields[0]);
+            if (!(idStream >> id) || id <= 0 || (idStream >> extra)){
+                skipped++;
+                continue;
+            }
+            bool missing = false;
+            for (int i = 1; i < 5; i++){
+                if (fields[i].find_first_not_of(" \t\r") == string::npos){
+                    missing = true;
+                }
+            }
+            if (missing || search(id) != nullptr){
+                skipped++;
+                continue;
+            }
+            if (insert(id, fields[1], fields[2], fields[3], fields[4])){
+                added++;
+            }
+        }
+        cout << added << " employees loaded. " << skipped << " rows skipped." << endl;
+        return !file.bad();
+    }
 };
+
+// This function reads an integer without crashing on letters or invalid numbers.
+int readNumber(string message, int minimum, int maximum){
+    string input;
+    while (true){
+        cout << message;
+        if (!getline(cin, input)){
+            return -1;
+        }
+        stringstream stream(input);
+        int number;
+        char extra;
+        if ((stream >> number) && !(stream >> extra) &&
+            number >= minimum && number <= maximum){
+            return number;
+        }
+        cout << "Invalid number. Please try again." << endl;
+    }
+}
+
+// This function reads a string from the user and ensures that it's not empty.
+string readText(string message){
+    string value;
+    while (true){
+        cout << message;
+        if (!getline(cin, value)){
+            return "";
+        }
+        if (value.find_first_not_of(" \t\r") != string::npos &&
+            value.find('\n') == string::npos && value.find('\r') == string::npos){
+            return value;
+        }
+        cout << "This field cannot be empty." << endl;
+    }
+}
+
+void showEmployee(EmployeeNode* employee){
+    if (employee == nullptr){
+        cout << "Employee not found." << endl;
+        return;
+    }
+    cout << "ID: " << employee->getID() << endl;
+    cout << "Name: " << employee->getName() << endl;
+    cout << "Department: " << employee->getDepartment() << endl;
+    cout << "Title: " << employee->getTitle() << endl;
+    cout << "Email: " << employee->getEmail() << endl;
+}
+
+int main(){
+    AVLTree directory;
+    const string filename = "employees.csv";
+    bool unsaved = false;
+
+    while (true){
+        cout << "\n===== Company Employee Directory =====" << endl;
+        cout << "1. Add Employee" << endl;
+        cout << "2. Find Employee" << endl;
+        cout << "3. Update Employee" << endl;
+        cout << "4. Delete Employee" << endl;
+        cout << "5. List All Employees" << endl;
+        cout << "6. Save to CSV" << endl;
+        cout << "7. Load from CSV" << endl;
+        cout << "8. Exit" << endl;
+
+        int choice = readNumber("Choose an option: ", 1, 8);
+        if (choice == -1){
+            break;
+        }
+        if (choice == 1){
+            int id = readNumber("Employee ID: ", 1, numeric_limits<int>::max());
+            if (id == -1) break;
+            if (directory.search(id) != nullptr){
+                cout << "Error: ID already exists." << endl;
+                continue;
+            }
+            string name = readText("Name: ");
+            string department = readText("Department: ");
+            string title = readText("Job title: ");
+            string email = readText("Email: ");
+            if (!cin) break;
+            if (directory.insert(id, name, department, title, email)){
+                cout << "Employee added." << endl;
+                unsaved = true;
+            }
+        }
+        else if (choice == 2){
+            int id = readNumber("Employee ID: ", 1, numeric_limits<int>::max());
+            if (id == -1) break;
+            showEmployee(directory.search(id));
+        }
+        else if (choice == 3){
+            int id = readNumber("Employee ID: ", 1, numeric_limits<int>::max());
+            if (id == -1) break;
+            if (directory.search(id) == nullptr){
+                cout << "Employee not found." << endl;
+                continue;
+            }
+            string name = readText("New name: ");
+            string department = readText("New department: ");
+            string title = readText("New job title: ");
+            string email = readText("New email: ");
+            if (!cin) break;
+            if (directory.update(id, name, department, title, email)){
+                cout << "Employee updated." << endl;
+                unsaved = true;
+            }
+        }
+        else if (choice == 4){
+            int id = readNumber("Employee ID: ", 1, numeric_limits<int>::max());
+            if (id == -1) break;
+            if (directory.remove(id)){
+                cout << "Employee deleted." << endl;
+                unsaved = true;
+            }
+            else{
+                cout << "Employee not found." << endl;
+            }
+        }
+        else if (choice == 5){
+            cout << "\nEmployees (" << directory.getSize() << "):" << endl;
+            directory.display();
+        }
+        else if (choice == 6){
+            if (directory.saveToFile(filename)){
+                cout << "Saved to " << filename << endl;
+                unsaved = false;
+            }
+            else{
+                cout << "Error saving file." << endl;
+            }
+        }
+        else if (choice == 7){
+            if (directory.loadFromFile(filename)){
+                cout << "File loaded." << endl;
+                unsaved = true; // Loading may add records to the current directory.
+            }
+            else{
+                cout << "Could not open " << filename << endl;
+            }
+        }
+        else if (choice == 8){
+            if (unsaved){
+                string answer;
+                while (true){
+                    cout << "Save changes before exiting? (y/n/c to cancel): ";
+                    if (!getline(cin, answer)){
+                        return 0;
+                    }
+                    if (answer == "y" || answer == "Y"){
+                        if (directory.saveToFile(filename)){
+                            cout << "Changes saved." << endl;
+                            return 0;
+                        }
+                        cout << "Error saving file. Exit canceled." << endl;
+                        break;
+                    }
+                    if (answer == "n" || answer == "N"){
+                        return 0;
+                    }
+                    if (answer == "c" || answer == "C"){
+                        break;
+                    }
+                    cout << "Enter y, n, or c." << endl;
+                }
+            }
+            else{
+                break;
+            }
+        }
+    }
+    return 0;
+}
