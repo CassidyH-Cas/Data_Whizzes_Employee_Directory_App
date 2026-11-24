@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <limits>
+#include <algorithm>
 using namespace std;
 
 class EmployeeNode {
@@ -72,11 +73,9 @@ private:
 
         if (empId < node->employeeID){ 
             node->left = insert(node->left, empId, n, d, t, e);
-            completed = true;
         }
         else if (empId > node->employeeID){ 
             node->right = insert(node->right, empId, n, d, t, e);
-            completed = true;
         }
         else{ 
             // If the ID already exists, we don't add the node and return the existing node
