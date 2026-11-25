@@ -1,8 +1,10 @@
-# Company Employee Directory
+# Company Employee Directory 
 
-**Author:** Data Whizzes team  
-**Course:** CSC 307 – Data Structures and Algorithm Analysis  
-**Semester:** Fall 2026
+**Author:** Michael Gibson Jr., Bishesh Poudel, Cassidy Hancock  
+
+**Course:** CSC 307/H002  
+
+**Semester:** Fall/2026
 
 A command-line C++ application that uses an AVL tree to manage employee records.
 
@@ -51,12 +53,7 @@ g++ -std=c++11 main.cpp -o employee_directory.exe
 .\employee_directory.exe
 ```
 
-**Windows (MSYS2 UCRT64 terminal):**
-
-```bash
-g++ -std=c++11 main.cpp -o employee_directory.exe
-./employee_directory.exe
-```
+**Windows (MSYS2 UCRT64 terminal):** 
 
 **Linux:**
 
@@ -66,6 +63,15 @@ g++ -std=c++11 main.cpp -o employee_directory
 ```
 
 **macOS (with Apple Clang):**
+then run using: 
+
+Windows:
+
+```bash
+./employee_directory.exe (or employee_directory.exe in Command Prompt)
+```
+
+macOS/Linux:
 
 ```bash
 clang++ -std=c++11 main.cpp -o employee_directory
@@ -104,3 +110,4 @@ Choose option 6 to save all current records (by overwriting the CSV file), or op
 - **The CSV is empty when you start the app:** The loading is manual. Choose menu option 7 to load saved records.
 - **Loading reports skipped rows:** Malformed records and duplicate employee IDs are ignored.
 - **Known minor behavior:** Loading a CSV may trigger a save prompt upon exit even if no new employee records were added.
+ 
